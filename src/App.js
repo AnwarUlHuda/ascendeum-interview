@@ -5,8 +5,9 @@ export default function App() {
   const [timer, setTimer] = useState(5);
   const [clickedData, setClickedData] = useState([]);
   const [currentState, setCurrentState] = useState("start");
-  const [currentTime, setCurrentTime] = useState(0);
+  const [currentTime, setCurrentTime] = useState(timer);
   const [currentPos, setCurrentPos] = useState();
+  const [additionalTime, setadditionalTime] = useState(0);
 
   const handleStartClick = () => {
     setCurrentState("in-progress");
@@ -20,33 +21,48 @@ export default function App() {
   };
 
   useEffect(() => {
-    let interval;
-    if (currentState === "in-progress" && currentTime > 0) {
-      interval = setInterval(() => {
-        setCurrentTime((prev) => Math.max(prev - 0.1, 0));
-      }, 100);
-    } else if (currentState === "in-progress" && currentTime === 0) {
+    if (currentState !== "in-progress") return;
+
+    const interval = setInterval(() => {
+      setCurrentTime((prevTime) => {
+        if (prevTime <= 0.1) {
+          return Number(timer);
+        }
+        return prevTime - 0.1;
+      });
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [currentState, timer]);
+
+  useEffect(() => {
+    if (currentTime <= 0.1 && currentState === "in-progress") {
       const random = Math.floor(Math.random() * 100);
       setCurrentPos(random);
+      let prevTime = additionalTime;
+      setadditionalTime(Number(prevTime) + Number(timer));
       setCurrentTime(timer);
     }
-    return () => clearInterval(interval);
-  }, [currentState, currentTime, timer]);
+  }, [currentTime]);
 
   const handleReset = () => {
     setCurrentState("start");
     setTimer(5);
     setCurrentTime(0);
+    setadditionalTime(0);
+    setCurrentPos(null);
     setClickedData([]);
   };
 
   const handleClick = (value) => {
     if (value == currentPos && currentState == "in-progress") {
-      let value = Number(timer - currentTime).toFixed(2);
-      setClickedData((prev) => [...prev, value]);
+      let value = Number(timer - currentTime).toFixed(1);
+      let data = parseFloat(value) + additionalTime;
+      setCurrentTime(timer);
+      setadditionalTime(0);
+      setClickedData((prev) => [...prev, data]);
       let random = Math.floor(Math.random() * 100);
       setCurrentPos(random);
-      setCurrentTime(timer);
     }
   };
 
@@ -91,13 +107,11 @@ export default function App() {
                   height: "18px",
                   boxSizing: "border-box",
                   border:
-                    currentPos == index + 1
-                      ? "1px solid red"
-                      : "1px solid white",
-                  backgroundColor: currentPos == index + 1 ? "red" : "white",
+                    currentPos == index ? "1px solid red" : "1px solid white",
+                  backgroundColor: currentPos == index ? "red" : "white",
                   display: "block",
                 }}
-                onClick={(e) => handleClick(index + 1)}
+                onClick={(e) => handleClick(index)}
               ></div>
             );
           })}
